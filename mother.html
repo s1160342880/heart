@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爱心动画</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#F592B1',
+                        secondary: '#5BB0B3',
+                        accent: '#F591F7',
+                    },
+                    fontFamily: {
+                        kai: ['KaiTi', 'STKaiti', 'serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .bg-blur {
+                backdrop-filter: blur(8px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-50 to-blue-50 min-h-screen flex items-center justify-center p-4 overflow-hidden">
+    <div class="relative w-full max-w-4xl aspect-video bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <!-- 顶部信息栏 -->
+        <div class="absolute top-0 left-0 right-0 bg-white/80 bg-blur px-4 py-2 flex justify-between items-center z-10 border-b border-gray-100">
+            <h1 class="text-primary font-bold text-lg">爱心动画</h1>
+            <div class="flex space-x-3">
+                <button id="musicToggle" class="text-gray-500 hover:text-primary transition-colors">
+                    <i class="fa fa-volume-up"></i>
+                </button>
+                <button id="resetBtn" class="text-gray-500 hover:text-primary transition-colors">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 动画画布 -->
+        <canvas id="heartCanvas" class="w-full h-full"></canvas>
+        
+        <!-- 底部信息 -->
+        <div class="absolute bottom-0 left-0 right-0 bg-white/80 bg-blur px-4 py-2 flex justify-between items-center z-10 border-t border-gray-100">
+            <p class="text-gray-600 text-sm">母亲节快乐</p>
+            <p class="text-gray-600 text-sm">彭世杰</p>
+        </div>
+    </div>
+
+    <script>
+        // 音频元素
+        const audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+        audio.loop = true;
+        
+        // 音乐控制
+        document.getElementById('musicToggle').addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (audio.paused) {
+                audio.play().catch(e => console.log('无法自动播放音乐:', e));
+                icon.classList.remove('fa-volume-off');
+                icon.classList.add('fa-volume-up');
+            } else {
+                audio.pause();
+                icon.classList.remove('fa-volume-up');
+                icon.classList.add('fa-volume-off');
+            }
+        });
+        
+        // 重置按钮
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            init();
+        });
+        
+        // 获取Canvas元素和绘图上下文
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置Canvas尺寸
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        // 监听窗口大小变化，调整Canvas尺寸
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // 随机内部扩散
+        function scatterInside(xo, yo, beta = 0.1) {
+            // 随机内部扩散
+            const ratioX = -beta * Math.log(Math.random());
+            const ratioY = beta * Math.log(Math.random());
+            const x = ratioX * xo;
+            const y = ratioY * yo;
+            
+            // 绘制扩散粒子
+            ctx.fillStyle = '#F591F7';
+            ctx.beginPath();
+            ctx.arc(x, y, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // 绘制爱心
+        function heart(particle, ratio, color) {
+            ctx.fillStyle = color;
+            
+            // 绘制爱心主体
+            for (let i = 0; i <= 2 * particle; i += 0.001) {
+                // 关键，画爱心的公式
+                let x = 16 * (Math.sin(i) * Math.sin(i) * Math.sin(i));
+                let y = -(13 * Math.cos(i) - 5 * Math.cos(2 * i) - 2 * Math.cos(3 * i) - Math.cos(4 * i));
+                
+                // 控制爱心的大小和位置
+                x = x * ratio + canvas.width / 2;
+                y = y * ratio + canvas.height / 2;
+                
+                // 绘制爱心点
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 扩散
+                if (Math.floor(i * 10000) % 7 === 0) {
+                    scatterInside(x - canvas.width / 2, y - canvas.height / 2);
+                }
+                if (Math.floor(i * 10000) % 107 === 0) {
+                    scatterInside(x - canvas.width / 2, y - canvas.height / 2, 0.07);
+                }
+            }
+            
+            // 爱心里面加字
+            ctx.fillStyle = '#5BB0B3';
+            ctx.font = 'bold 40px KaiTi, STKaiti, serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('我挂科了', canvas.width / 2, canvas.height / 2);
+        }
+        
+        // 动画循环
+        let animationId;
+        let frameCount = 0;
+        
+        function animate() {
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 计算比例（控制大小）
+            frameCount++;
+            let ratio = 16 * Math.sin(frameCount / 360.0 * Math.PI);
+            ratio = Math.abs(ratio);
+            
+            // 缩放比例，使爱心大小更合适
+            ratio = ratio * 3 + 10;
+            
+            // 绘制爱心
+            heart(80, ratio, '#FF0000');
+            
+            // 继续动画循环
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // 初始化
+        function init() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            frameCount = 0;
+            animate();
+            
+            // 自动播放音乐（如果浏览器允许）
+            audio.play().catch(e => console.log('无法自动播放音乐:', e));
+        }
+        
+        // 开始动画
+        init();
+    </script>
+</body>
+</html>
+    
